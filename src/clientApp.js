@@ -30,6 +30,8 @@ const AUTH_ENABLED = false;
 const universe = buildUniverse();
 const universeMap = new Map(universe.map((item) => [item.symbol, item]));
 const uiSnapshot = uiCache.read();
+const chartViews = new Map();
+let lightweightChartsModulePromise = null;
 
 const state = {
   user: null,
@@ -66,11 +68,15 @@ const state = {
   autoJumpToPanel: uiSnapshot.autoJumpToPanel !== false,
   marketPhase: "Loading",
   health: { ok: false, server: "Checking server", time: null },
+  commandPaletteOpen: false,
 };
 
 const el = {
   appTitle: document.querySelector("#appTitle"),
   functionRow: document.querySelector("#functionRow"),
+  openCommandPalette: document.querySelector("#openCommandPalette"),
+  paletteBackdrop: document.querySelector("#paletteBackdrop"),
+  commandPalette: document.querySelector("#commandPalette"),
   overviewStrip: document.querySelector("#overviewStrip"),
   workspaceGrid: document.querySelector("#workspaceGrid"),
   watchlistRail: document.querySelector("#watchlistRail"),
@@ -130,11 +136,13 @@ function init() {
   }
 
   bindEvents();
+  enablePanelDocking();
   setActivePanel(state.activePanel);
   renderFunctionRow();
   renderOverviewStrip();
   renderRails();
   renderAllPanels();
+  applyTerminalInputClass(document);
   updateFocusLayout();
   updateAuthControls();
   updateAutoJumpButton();
@@ -146,6 +154,58 @@ function init() {
   setInterval(updateSessionClock, 1000);
   setInterval(handleRefreshCountdown, 1000);
   setInterval(checkHealth, 60000);
+  window.addEventListener("resize", fitAllCharts);
+}
+
+function enablePanelDocking() {
+  if (!el.workspaceGrid) return;
+
+  document.querySelectorAll("[data-panel]").forEach((panelNode) => {
+    panelNode.setAttribute("draggable", "true");
+  });
+
+  el.workspaceGrid.addEventListener("dragstart", (event) => {
+    const panelNode = event.target.closest("[data-panel]");
+    if (!panelNode) return;
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/panel-id", panelNode.dataset.panel || "");
+    panelNode.classList.add("is-dragging");
+  });
+
+  el.workspaceGrid.addEventListener("dragend", () => {
+    document.querySelectorAll("[data-panel].is-dragging").forEach((panelNode) => panelNode.classList.remove("is-dragging"));
+  });
+
+  el.workspaceGrid.addEventListener("dragover", (event) => {
+    if (!event.target.closest("[data-panel]")) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  });
+
+  el.workspaceGrid.addEventListener("drop", (event) => {
+    const target = event.target.closest("[data-panel]");
+    if (!target) return;
+    event.preventDefault();
+
+    const sourcePanelId = event.dataTransfer.getData("text/panel-id");
+    const source = sourcePanelId ? document.querySelector(`[data-panel="${sourcePanelId}"]`) : null;
+    if (!source || source === target) return;
+
+    const sourceNext = source.nextElementSibling;
+    const targetNext = target.nextElementSibling;
+
+    if (sourceNext === target) {
+      el.workspaceGrid.insertBefore(target, source);
+      return;
+    }
+    if (targetNext === source) {
+      el.workspaceGrid.insertBefore(source, target);
+      return;
+    }
+
+    el.workspaceGrid.insertBefore(source, targetNext);
+    el.workspaceGrid.insertBefore(target, sourceNext);
+  });
 }
 
 function bindEvents() {
@@ -155,6 +215,10 @@ function bindEvents() {
   el.functionRow?.addEventListener("click", (event) => {
     const button = event.target.closest("[data-module]");
     if (button) loadModule(button.dataset.module, state.activePanel, { reveal: true });
+  });
+  el.openCommandPalette?.addEventListener("click", () => openCommandPalette());
+  el.paletteBackdrop?.addEventListener("click", (event) => {
+    if (event.target === el.paletteBackdrop) closeCommandPalette();
   });
 
   el.refreshAllButton?.addEventListener("click", () => {
@@ -417,12 +481,14 @@ function setAuthMessage(message, tone) {
   if (!el.authStatus) return;
   el.authStatus.textContent = message;
   el.authStatus.dataset.tone = tone;
+  el.authStatus.classList.toggle("active", Boolean(message));
 }
 
 function setSettingsMessage(message, tone) {
   if (!el.settingsStatus) return;
   el.settingsStatus.textContent = message;
   el.settingsStatus.dataset.tone = tone;
+  el.settingsStatus.classList.toggle("active", Boolean(message));
 }
 
 function populateSettingsForm() {
@@ -445,12 +511,43 @@ function setSignupAvailability(message, tone = "neutral") {
   if (!el.signupAvailability) return;
   el.signupAvailability.textContent = message;
   el.signupAvailability.dataset.tone = tone;
+  el.signupAvailability.classList.toggle("active", Boolean(message));
+}
+
+function applyTerminalInputClass(rootNode = document) {
+  rootNode.querySelectorAll("input, select, textarea").forEach((inputNode) => {
+    inputNode.classList.add("terminal-input");
+  });
 }
 
 function setButtonLoading(button, loading, label) {
   if (!button) return;
   button.disabled = loading;
   button.textContent = label;
+}
+
+function openCommandPalette(prefill = "") {
+  if (!el.paletteBackdrop) return;
+  state.commandPaletteOpen = true;
+  el.paletteBackdrop.classList.remove("hidden");
+  if (el.commandInput) {
+    el.commandInput.value = prefill;
+    el.commandInput.focus();
+    if (prefill) renderAutocomplete();
+  }
+}
+
+function closeCommandPalette() {
+  if (!el.paletteBackdrop) return;
+  state.commandPaletteOpen = false;
+  el.paletteBackdrop.classList.add("hidden");
+  hideAutocomplete();
+}
+
+function loadingSkeleton(lines = 3) {
+  return `<div class="stack">${Array.from({ length: lines })
+    .map((_, index) => `<span class="skeleton-box ${index === 0 ? "lg" : ""}"></span>`)
+    .join("")}</div>`;
 }
 
 async function restoreSession() {
@@ -615,6 +712,7 @@ async function checkSignupAvailability(email, username) {
 
 function renderFunctionRow() {
   if (!el.functionRow) return;
+  if (el.functionRow.classList.contains("hidden")) return;
   el.functionRow.innerHTML = functionKeys
     .map(
       (item) => `
@@ -647,8 +745,8 @@ function renderOverviewStrip() {
           (symbol) => `
             <article class="overview-card is-placeholder">
               <span>${symbol}</span>
-              <strong>Loading</strong>
-              <small>Live quote</small>
+              <span class="skeleton-box lg"></span>
+              <span class="skeleton-box sm"></span>
             </article>
           `,
         )
@@ -675,7 +773,7 @@ function renderRails() {
             <button class="rail-item" type="button" data-load-module="quote" data-target-symbol="${symbol}" data-target-panel="${state.activePanel}">
               <div>
                 <strong>${symbol}</strong>
-                <small>${quote?.name || "Loading"}</small>
+                <small>${quote?.name || "Waiting for quote"}</small>
               </div>
               <div>
                 <strong>${formatPrice(quote?.price || 0, symbol)}</strong>
@@ -794,6 +892,17 @@ function renderPanel(panel) {
   };
 
   content.innerHTML = (renderers[moduleName] || renderHome)(panel);
+  applyTerminalInputClass(content);
+
+  if (moduleName === "chart") {
+    const symbol = state.panelSymbols[panel] || "AAPL";
+    const range = state.chartRanges[panel] || "1mo";
+    const interval = chartIntervalForRange(range);
+    const points = state.chartCache.get(chartKey(symbol, range, interval)) || [];
+    void mountCandlestickChart(panel, points);
+  } else {
+    clearPanelChart(panel);
+  }
 }
 
 function renderBriefing(panel) {
@@ -938,7 +1047,7 @@ function renderHome(panel) {
           <div class="pulse-grid">
             ${state.overviewQuotes.length
               ? state.overviewQuotes.slice(0, 4).map((quote) => `<div class="pulse-card is-live"><span>${quote.symbol}</span><strong>${formatPrice(quote.price, quote.symbol)}</strong><small class="${Number(quote.changePct || 0) >= 0 ? "positive" : "negative"}">${formatSignedPct(quote.changePct || 0)}</small></div>`).join("")
-              : `<div class="pulse-card"><span>Market pulse</span><strong>Loading market data…</strong><small>Quotes will appear shortly</small></div>`}
+              : `<div class="pulse-card">${loadingSkeleton(3)}</div>`}
           </div>
         </article>
       </div>
@@ -956,7 +1065,7 @@ function renderHome(panel) {
 function renderQuote(panel) {
   const symbol = state.panelSymbols[panel] || "AAPL";
   const quote = buildQuote(symbol);
-  if (!quote) return emptyState(`Loading quote for ${symbol}…`);
+  if (!quote) return `<section class="stack">${loadingSkeleton(5)}</section>`;
 
   const alertThreshold = Math.max(1, quote.price * 1.03);
   const peers = findRelatedSymbols(symbol).slice(0, 4);
@@ -1027,7 +1136,10 @@ function renderChart(panel) {
       </div>
 
       <article class="card chart-card chart-card-feature">
-        ${points.length ? buildLineChart(points) : `<div class="empty-inline">Loading ${range.toUpperCase()} chart for ${symbol}…</div>`}
+        <div class="chart-canvas-wrap">
+          <div class="chart-canvas" id="chartCanvas${panel}" data-chart-panel="${panel}"></div>
+          ${points.length ? "" : `<div class="chart-loading">${loadingSkeleton(4)}</div>`}
+        </div>
       </article>
 
       <div class="card-grid chart-summary-grid">
@@ -1066,7 +1178,9 @@ function renderNews(panel) {
               `;
             })
             .join("")
-        : emptyState(state.newsItems.length ? `No headlines matched ${state.newsFilter}.` : "Loading headlines…")}
+        : state.newsItems.length
+          ? emptyState(`No headlines matched ${state.newsFilter}.`)
+          : `<article class="card">${loadingSkeleton(5)}</article>`}
     </section>
   `;
 }
@@ -1090,7 +1204,7 @@ function renderScreener(panel) {
         </select>
         <input data-screener-search="${panel}" value="${filters.search}" placeholder="Search by symbol or name" />
       </div>
-      <table class="data-table data-table-dense">
+      <table class="data-table data-table-dense financial-data-table">
         <thead><tr><th>Ticker</th><th>Name</th><th>Sector</th><th>Universe</th><th>Price</th><th>Change</th><th></th></tr></thead>
         <tbody>
           ${results
@@ -1156,7 +1270,7 @@ function renderPortfolio(panel) {
         <input name="cost" type="number" step="0.01" placeholder="Cost" required />
         <button class="btn btn-primary" type="submit">Add position</button>
       </form>
-      <table class="data-table data-table-dense">
+      <table class="data-table data-table-dense financial-data-table">
         <thead><tr><th>Ticker</th><th>Shares</th><th>Cost</th><th>Mark</th><th>Value</th><th>P/L</th><th></th></tr></thead>
         <tbody>
           ${rows
@@ -1209,8 +1323,7 @@ function renderMacro() {
       </article>
       <article class="card">
         <header class="card-head"><h4>FX rates</h4></header>
-        <div class="fx-grid">${fxCards || `<div class="empty-inline">Loading FX rates…</div>`}</div>
-        <div class="fx-grid">${fxCards || `<div class="empty-inline">Loading FX rates…</div>`}</div>
+        <div class="fx-grid">${fxCards || loadingSkeleton(4)}</div>
       </article>
     </section>
   `;
@@ -1234,7 +1347,7 @@ function renderOptions(panel) {
         <button class="btn btn-primary" type="button" data-refresh-options="${panel}:${symbol}">Refresh options</button>
       </div>
       <div class="card-grid card-grid-home">
-        <article class="card stat-card"><span>Underlying</span><strong>${symbol}</strong><small>${chain?.spot ? formatPrice(chain.spot, symbol) : "Loading"}</small></article>
+        <article class="card stat-card"><span>Underlying</span><strong>${symbol}</strong><small>${chain?.spot ? formatPrice(chain.spot, symbol) : "Waiting for chain"}</small></article>
         <article class="card stat-card"><span>Calls</span><strong>${chain?.calls?.length || 0}</strong><small>Loaded contracts</small></article>
         <article class="card stat-card"><span>Puts</span><strong>${chain?.puts?.length || 0}</strong><small>Loaded contracts</small></article>
       </div>
@@ -1253,9 +1366,9 @@ function renderOptions(panel) {
 }
 
 function renderOptionsTable(contracts) {
-  if (!contracts.length) return `<div class="empty-inline">Loading chain…</div>`;
+  if (!contracts.length) return loadingSkeleton(6);
   return `
-    <table class="data-table compact">
+    <table class="data-table compact financial-data-table">
       <thead><tr><th>Strike</th><th>Bid</th><th>Ask</th><th>Last</th><th>OI</th></tr></thead>
       <tbody>
         ${contracts
@@ -1434,6 +1547,7 @@ function processCommand() {
 
   if (el.commandInput) el.commandInput.value = "";
   hideAutocomplete();
+  closeCommandPalette();
   syncUiCache();
   queueWorkspaceSave();
 }
@@ -1446,6 +1560,7 @@ function handleCommandKeydown(event) {
   if (event.key === "Escape") {
     if (el.commandInput) el.commandInput.value = "";
     hideAutocomplete();
+    closeCommandPalette();
     return;
   }
   if (event.key === "ArrowUp") {
@@ -1676,13 +1791,13 @@ function handleGlobalHotkeys(event) {
 
   if (!inEditable && event.key === "/") {
     event.preventDefault();
-    el.commandInput?.focus();
+    openCommandPalette();
     return;
   }
 
   if (cmdOrCtrl && event.key.toLowerCase() === "k") {
     event.preventDefault();
-    el.commandInput?.focus();
+    openCommandPalette();
     return;
   }
 
@@ -1727,6 +1842,7 @@ function handleGlobalHotkeys(event) {
   if (event.key === "Escape") {
     closeSettingsModal();
     closeAuthModal();
+    closeCommandPalette();
   }
 }
 
@@ -2135,60 +2251,154 @@ function optionsKey(symbol, expiration) {
   return `${symbol}:${expiration || "nearest"}`;
 }
 
-function buildLineChart(points) {
-  const W = 640;
-  const H = 260;
-  const PAD_T = 16;
-  const PAD_B = 24;
-  const PLOT_H = H - PAD_T - PAD_B;
+function normalizeCandle(point, previousClose = null) {
+  const close = Number(point.close ?? point.price ?? 0);
+  const open = Number(point.open ?? previousClose ?? close);
+  const high = Number(point.high ?? Math.max(open, close));
+  const low = Number(point.low ?? Math.min(open, close));
+  const time = Number(point.timestamp ?? point.time ?? 0);
+  return {
+    time,
+    open,
+    high,
+    low,
+    close,
+  };
+}
 
-  const values = points.map((p) => Number(p.close));
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const spread = max - min || 1;
-  const isUp = values[values.length - 1] >= values[0];
-  const lineColor = isUp ? "#2fcf84" : "#ff5f7f";
-  const gradId = `cg-${Math.random().toString(36).slice(2, 7)}`;
+function toCandlestickData(points) {
+  let previousClose = null;
+  return points
+    .map((point) => {
+      const candle = normalizeCandle(point, previousClose);
+      previousClose = candle.close;
+      return candle;
+    })
+    .filter((candle) => candle.time > 0 && Number.isFinite(candle.open) && Number.isFinite(candle.high) && Number.isFinite(candle.low) && Number.isFinite(candle.close));
+}
 
-  const pts = points.map((p, i) => {
-    const x = (i / Math.max(points.length - 1, 1)) * W;
-    const y = PAD_T + PLOT_H - ((Number(p.close) - min) / spread) * PLOT_H;
-    return { x, y };
+function clearPanelChart(panel) {
+  const existing = chartViews.get(panel);
+  if (!existing) return;
+  existing.chart.remove();
+  chartViews.delete(panel);
+}
+
+function fitAllCharts() {
+  chartViews.forEach(({ chart, container }) => {
+    const width = Math.max(320, Math.floor(container.clientWidth || 0));
+    const height = Math.max(220, Math.floor(container.clientHeight || 0));
+    chart.resize(width, height);
+    chart.timeScale().fitContent();
+  });
+}
+
+async function loadLightweightChartsModule() {
+  if (lightweightChartsModulePromise) return lightweightChartsModulePromise;
+
+  lightweightChartsModulePromise = (async () => {
+    const candidates = [
+      "/node_modules/lightweight-charts/dist/lightweight-charts.production.mjs",
+      "../node_modules/lightweight-charts/dist/lightweight-charts.production.mjs",
+    ];
+
+    for (const candidate of candidates) {
+      try {
+        const moduleRef = await import(candidate);
+        if (moduleRef?.createChart) return moduleRef;
+      } catch {
+        // try next candidate
+      }
+    }
+
+    return null;
+  })();
+
+  return lightweightChartsModulePromise;
+}
+
+async function mountCandlestickChart(panel, points) {
+  const container = document.querySelector(`#chartCanvas${panel}`);
+  if (!container) return;
+
+  const candles = toCandlestickData(points);
+  clearPanelChart(panel);
+  if (!candles.length) return;
+
+  const chartLib = await loadLightweightChartsModule();
+  if (!chartLib?.createChart) {
+    container.innerHTML = `<div class="empty-inline">Chart engine unavailable. Data is still live.</div>`;
+    return;
+  }
+
+  const width = Math.max(320, Math.floor(container.clientWidth || 0));
+  const height = Math.max(220, Math.floor(container.clientHeight || 0));
+
+  const chart = chartLib.createChart(container, {
+    width,
+    height,
+    layout: {
+      textColor: "#E5E5E5",
+      background: { color: "transparent" },
+    },
+    grid: {
+      vertLines: { visible: false },
+      horzLines: { visible: false },
+    },
+    rightPriceScale: {
+      borderVisible: false,
+    },
+    leftPriceScale: {
+      visible: false,
+    },
+    timeScale: {
+      borderVisible: false,
+      timeVisible: true,
+      secondsVisible: false,
+    },
+    crosshair: {
+      mode: chartLib.CrosshairMode?.Normal ?? 0,
+      vertLine: { visible: true, labelVisible: false, color: "#4A90E2" },
+      horzLine: { visible: true, labelVisible: false, color: "#4A90E2" },
+    },
+    handleScroll: {
+      mouseWheel: true,
+      pressedMouseMove: true,
+      vertTouchDrag: true,
+      horzTouchDrag: true,
+    },
+    handleScale: {
+      axisPressedMouseMove: true,
+      mouseWheel: true,
+      pinch: true,
+    },
   });
 
-  const linePath = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
-  const areaPath = `${linePath} L${W} ${H - PAD_B} L0 ${H - PAD_B} Z`;
+  const seriesOptions = {
+    upColor: "#00E676",
+    downColor: "#FF3B30",
+    borderVisible: false,
+    wickUpColor: "#00E676",
+    wickDownColor: "#FF3B30",
+  };
 
-  // Build 6 y-axis labels
-  const yLabels = Array.from({ length: 5 }, (_, i) => {
-    const frac = i / 4;
-    const val = min + spread * frac;
-    const y = PAD_T + PLOT_H - frac * PLOT_H;
-    return `<text x="4" y="${y.toFixed(1)}" class="chart-label" dy="4">${val >= 1000 ? `${(val / 1000).toFixed(1)}K` : val.toFixed(2)}</text>`;
-  }).join("");
+  let series = null;
+  if (typeof chart.addCandlestickSeries === "function") {
+    series = chart.addCandlestickSeries(seriesOptions);
+  } else if (typeof chart.addSeries === "function" && chartLib.CandlestickSeries) {
+    series = chart.addSeries(chartLib.CandlestickSeries, seriesOptions);
+  }
 
-  // Build 4 x-axis date labels
-  const xLabels = [0, 0.33, 0.66, 1].map((frac) => {
-    const idx = Math.round(frac * (points.length - 1));
-    const pt = points[idx];
-    const label = pt?.timestamp ? new Date(pt.timestamp * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
-    const x = frac * W;
-    return `<text x="${x.toFixed(1)}" y="${H - 4}" class="chart-label chart-label-x" text-anchor="${frac === 0 ? "start" : frac === 1 ? "end" : "middle"}">${label}</text>`;
-  }).join("");
+  if (!series) {
+    chart.remove();
+    container.innerHTML = `<div class="empty-inline">Chart engine not compatible.</div>`;
+    return;
+  }
 
-  return `
-    <svg viewBox="0 0 ${W} ${H}" class="line-chart" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="${lineColor}" stop-opacity="0.28"/>
-          <stop offset="85%" stop-color="${lineColor}" stop-opacity="0.03"/>
-        </linearGradient>
-      </defs>
-      <path d="${areaPath}" fill="url(#${gradId})"/>
-      <path d="${linePath}" fill="none" stroke="${lineColor}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-      ${yLabels}
-      ${xLabels}
-    </svg>`;
+  series.setData(candles);
+  chart.timeScale().fitContent();
+
+  chartViews.set(panel, { chart, container });
 }
 
 function calculateBlackScholes({ spot, strike, years, rate, volatility }) {

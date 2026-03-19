@@ -54,6 +54,7 @@
         <button class="btn btn-icon" id="refreshAllButton" type="button" title="Refresh live data">
           <svg viewBox="0 0 20 20" fill="none"><path d="M3 10a7 7 0 0 1 12-4.9L17 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M17 10a7 7 0 0 1-12 4.9L3 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><polyline points="14,4 17,7 14,10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><polyline points="6,16 3,13 6,10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
+        <button class="btn btn-ghost" id="openCommandPalette" type="button">Cmd+K</button>
         <button class="btn btn-ghost" id="autoJumpButton" type="button" title="Auto-scroll to active panel">Auto-jump: On</button>
         <button class="btn btn-ghost" id="resetFocusButton" type="button">Grid</button>
         <button class="btn btn-ghost hidden" id="openSettingsBtn" type="button">Account</button>
@@ -62,7 +63,7 @@
       </div>
     </header>
 
-    <nav class="function-row" id="functionRow"></nav>
+    <nav class="function-row hidden" id="functionRow" aria-hidden="true"></nav>
 
     <section class="overview-strip" id="overviewStrip" aria-label="Live market overview"></section>
 
@@ -136,19 +137,6 @@
           </article>
         </section>
 
-        <section class="command-shell">
-          <span class="cmd-prefix">CMD</span>
-          <input
-            id="commandInput"
-            class="command-input"
-            type="text"
-            autocomplete="off"
-            spellcheck="false"
-            placeholder="Try: AAPL Q, NEWS, WATCH TSLA, OPTIONS NVDA, HELP"
-          />
-          <button id="runCommandButton" class="btn btn-primary" type="button">Run</button>
-          <div class="autocomplete hidden" id="autocomplete"></div>
-        </section>
       </div>
     </section>
 
@@ -166,7 +154,7 @@
         <button class="icon-btn" id="closeAuthModal" type="button">×</button>
       </header>
 
-      <p class="auth-status" id="authStatus">Sign in only if you want backend sync.</p>
+      <p class="auth-status error-message-container active" id="authStatus">Sign in only if you want backend sync.</p>
 
       <div class="auth-tabs" id="authTabs">
         <button class="auth-tab is-active" data-auth-tab="login" type="button">Sign in</button>
@@ -205,7 +193,7 @@
           Username
           <input id="signupUsername" name="username" type="text" required />
         </label>
-        <p class="auth-hint" id="signupAvailability">Use a unique email and username.</p>
+        <p class="auth-hint error-message-container active" id="signupAvailability">Use a unique email and username.</p>
         <label>
           Role
           <select id="signupRole" name="role"></select>
@@ -224,6 +212,22 @@
     </section>
   </div>
 
+  <div class="palette-backdrop hidden" id="paletteBackdrop">
+    <section class="command-shell command-palette" id="commandPalette" aria-label="Command palette">
+      <span class="cmd-prefix">CMD</span>
+      <input
+        id="commandInput"
+        class="command-input terminal-input"
+        type="text"
+        autocomplete="off"
+        spellcheck="false"
+        placeholder="Try: CHART TSLA, BRIEF, OPTIONS NVDA"
+      />
+      <button id="runCommandButton" class="btn btn-primary" type="button">Run</button>
+      <div class="autocomplete hidden" id="autocomplete"></div>
+    </section>
+  </div>
+
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <div class="modal-backdrop hidden" id="settingsModalBackdrop">
@@ -233,7 +237,7 @@
         <button class="icon-btn" id="closeSettingsModal" type="button">×</button>
       </header>
 
-      <p class="auth-status" id="settingsStatus">Update your account details securely.</p>
+      <p class="auth-status error-message-container active" id="settingsStatus">Update your account details securely.</p>
 
       <form id="updateProfileForm" class="auth-form">
         <div class="auth-grid">

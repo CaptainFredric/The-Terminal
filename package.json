@@ -6,5 +6,8 @@
   "scripts": {
     "start": "sh -c 'if [ -x ./.venv/bin/python ]; then ./.venv/bin/python backend/app.py; else python3 backend/app.py; fi'",
     "check": "sh -c 'if [ -x ./.venv/bin/python ]; then ./.venv/bin/python scripts/smoke_test.py; else python3 scripts/smoke_test.py; fi'"
+  },
+  "dependencies": {
+    "lightweight-charts": "^5.1.0"
   }
 }
