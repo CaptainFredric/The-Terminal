@@ -25,6 +25,7 @@ const CHART_RANGE_OPTIONS = [
   { label: "6M", value: "6mo" },
   { label: "1Y", value: "1y" },
 ];
+const AUTH_ENABLED = false;
 
 const universe = buildUniverse();
 const universeMap = new Map(universe.map((item) => [item.symbol, item]));
@@ -138,7 +139,7 @@ function init() {
   updateAuthControls();
   updateAutoJumpButton();
   updateStatusBar();
-  restoreSession();
+  if (AUTH_ENABLED) restoreSession();
   checkHealth();
   refreshAllData();
 
@@ -341,6 +342,10 @@ function openAuthModal(tab = "login") {
 }
 
 function handleAuthEntry() {
+  if (!AUTH_ENABLED) {
+    showToast("Login is temporarily disabled in this build.", "neutral");
+    return;
+  }
   if (state.user) {
     setAuthMessage(`Signed in as @${state.user.username}. Sign in to switch account.`, "neutral");
   }
@@ -353,6 +358,10 @@ function closeAuthModal() {
 }
 
 function openSettingsModal() {
+  if (!AUTH_ENABLED) {
+    showToast("Account controls are disabled in this build.", "neutral");
+    return;
+  }
   if (!state.user) {
     openAuthModal("login");
     return;
@@ -368,6 +377,15 @@ function closeSettingsModal() {
 }
 
 function updateAuthControls() {
+  if (!AUTH_ENABLED) {
+    el.logoutButton?.classList.add("hidden");
+    el.openSettingsBtn?.classList.add("hidden");
+    el.openAuthBtn?.classList.add("hidden");
+    el.authModalBackdrop?.classList.add("hidden");
+    el.settingsModalBackdrop?.classList.add("hidden");
+    return;
+  }
+
   if (state.user) {
     el.logoutButton?.classList.remove("hidden");
     el.openSettingsBtn?.classList.remove("hidden");
@@ -775,17 +793,6 @@ function renderPanel(panel) {
   };
 
   content.innerHTML = (renderers[moduleName] || renderHome)(panel);
-  markPanelSwap(panelNode);
-}
-
-function markPanelSwap(panelNode) {
-  panelNode.classList.remove("is-swapping");
-  void panelNode.offsetWidth;
-  panelNode.classList.add("is-swapping");
-  window.clearTimeout(panelNode.swapTimer);
-  panelNode.swapTimer = window.setTimeout(() => {
-    panelNode.classList.remove("is-swapping");
-  }, 380);
 }
 
 function renderHome(panel) {
@@ -1292,10 +1299,12 @@ function processCommand() {
   } else if (first === "SUGGEST" || first === "SUGGESTIONS") {
     loadModule("home", state.activePanel, { reveal: true });
     showToast("Showing suggested next actions.", "neutral");
-  } else if (first === "LOGIN") {
-    openAuthModal("login");
-  } else if (first === "SIGNUP" || first === "REGISTER") {
-    openAuthModal("signup");
+  } else if (first === "LOGIN" || first === "SIGNUP" || first === "REGISTER" || first === "SYNC") {
+    if (AUTH_ENABLED) {
+      openAuthModal(first === "SIGNUP" || first === "REGISTER" ? "signup" : "login");
+    } else {
+      showToast("Login is temporarily disabled in this build.", "neutral");
+    }
   } else if (first === "NEWS" && second) {
     state.newsFilter = second;
     loadModule("news", state.activePanel, { reveal: true });
@@ -1315,8 +1324,6 @@ function processCommand() {
     state.optionsSelection.symbol = second;
     loadModule("options", state.activePanel, { reveal: true });
     refreshOptions(second, state.optionsSelection.expiration);
-  } else if (first === "SYNC") {
-    openAuthModal("login");
   } else if (first === "WATCH" && second) {
     addToWatchlist(second);
   } else if (first === "ALERT" && second && third) {
@@ -1648,17 +1655,23 @@ function buildCommandSuggestions(panel) {
   const symbol = state.panelSymbols[panel] || state.watchlist[0] || "AAPL";
   const suggestions = [];
 
-  if (!state.user) {
+  if (AUTH_ENABLED && !state.user) {
     suggestions.push({
       label: "Sign in and sync",
       detail: "Back up your workspace to the backend",
       command: "LOGIN",
     });
-  } else {
+  } else if (AUTH_ENABLED && state.user) {
     suggestions.push({
       label: "Open account settings",
       detail: "Update profile, password, or account state",
       command: "SETTINGS",
+    });
+  } else {
+    suggestions.push({
+      label: "Local-first workspace",
+      detail: "This version runs without login for uninterrupted flow",
+      command: "SAVE",
     });
   }
 

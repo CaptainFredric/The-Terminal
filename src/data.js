@@ -42,12 +42,11 @@ export const commandCatalog = [
   { cmd: "REFRESH", desc: "Refresh live data across the workspace" },
   { cmd: "SAVE", desc: "Queue a workspace save" },
   { cmd: "GRID", desc: "Return panels to grid layout" },
-  { cmd: "FOCUS 2", desc: "Expand panel 2 with a swell transition" },
+  { cmd: "FOCUS 2", desc: "Focus panel 2" },
   { cmd: "NEXT", desc: "Cycle active panel to the next module" },
   { cmd: "PREV", desc: "Cycle active panel to the previous module" },
   { cmd: "RANGE 1Y", desc: "Change active chart range" },
   { cmd: "HOME", desc: "Open home panel" },
-  { cmd: "SETTINGS", desc: "Open account settings modal" },
   { cmd: "SUGGEST", desc: "Show smart next-action suggestions" },
   { cmd: "NEWS", desc: "Open news panel" },
   { cmd: "NEWS NVDA", desc: "Filter the news feed for NVDA" },
@@ -59,9 +58,6 @@ export const commandCatalog = [
   { cmd: "ALERT NVDA 950", desc: "Create price alert" },
   { cmd: "ADDPOS MSFT 5 410", desc: "Add portfolio position" },
   { cmd: "OPTIONS NVDA", desc: "Open options chain" },
-  { cmd: "SYNC", desc: "Open sign in modal" },
-  { cmd: "LOGIN", desc: "Open sign-in tab" },
-  { cmd: "SIGNUP", desc: "Open account creation tab" },
 ];
 
 export const calculatorDefaults = {

@@ -22,7 +22,7 @@
 body {
   margin: 0;
   font-family: var(--sans);
-  background: radial-gradient(circle at 20% 0%, #162247 0%, var(--bg) 50%);
+  background: radial-gradient(circle at 18% -12%, #1a2a57 0%, #0f1733 42%, var(--bg) 72%);
   color: var(--text);
 }
 
@@ -60,10 +60,12 @@ html {
 .terminal-app,
 .app-shell {
   min-height: 100vh;
+  max-width: 1580px;
+  margin: 0 auto;
   display: grid;
   grid-template-rows: auto auto 1fr auto auto;
-  gap: 14px;
-  padding: 16px;
+  gap: 16px;
+  padding: 18px;
 }
 
 .topbar {
@@ -71,10 +73,10 @@ html {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  background: var(--bg-soft);
-  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(20, 30, 60, 0.94) 0%, rgba(14, 21, 46, 0.95) 100%);
+  border: 1px solid rgba(67, 90, 162, 0.42);
   border-radius: var(--radius);
-  padding: 12px 14px;
+  padding: 14px 16px;
 }
 
 .brand-block,
@@ -105,6 +107,11 @@ html {
   margin: 0;
   color: var(--muted);
   font-size: 0.78rem;
+}
+
+.brand-slogan {
+  letter-spacing: 0.01em;
+  color: #a8b8e9 !important;
 }
 
 .topbar-right,
@@ -1032,12 +1039,11 @@ html {
   text-align: left;
   box-shadow: 0 6px 18px rgba(5, 10, 27, 0.28);
   cursor: pointer;
-  transition: transform .17s ease, border-color .17s ease, box-shadow .17s ease;
+  transition: border-color .17s ease, box-shadow .17s ease;
   border-left: 2px solid transparent;
 }
 
 .overview-card:hover {
-  transform: translateY(-3px);
   border-color: rgba(110, 142, 255, 0.7);
   border-left-color: var(--accent);
   box-shadow: 0 14px 28px rgba(8, 16, 44, 0.4);
@@ -1082,17 +1088,15 @@ html {
 
 .workspace-grid.is-focused .panel {
   opacity: 0.68;
-  transform: scale(0.985);
 }
 
 .workspace-grid.is-focused .panel.is-focused {
   opacity: 1;
-  transform: scale(1.01);
   box-shadow: 0 24px 48px rgba(7, 14, 38, 0.38);
 }
 
 .panel {
-  transition: transform .3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow .3s ease, border-color .22s ease, opacity .25s ease;
+  transition: box-shadow .24s ease, border-color .22s ease, opacity .22s ease;
   box-shadow: 0 8px 24px rgba(5, 10, 30, 0.32);
   background: linear-gradient(180deg, rgba(18, 26, 52, 0.98) 0%, rgba(13, 19, 40, 1) 100%);
 }
@@ -1105,10 +1109,6 @@ html {
 .panel.is-active {
   border-color: rgba(110, 144, 255, 0.72);
   box-shadow: 0 18px 40px rgba(14, 26, 72, 0.38);
-}
-
-.panel.is-swapping {
-  animation: panel-swell .38s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .panel-content {
@@ -1127,7 +1127,7 @@ html {
 .list-row,
 .range-pill,
 .mini-link {
-  transition: transform .18s ease, border-color .18s ease, background .18s ease, color .18s ease, box-shadow .18s ease;
+  transition: border-color .18s ease, background .18s ease, color .18s ease, box-shadow .18s ease;
 }
 
 .panel-btn:hover,
@@ -1140,7 +1140,7 @@ html {
 .list-row:hover,
 .range-pill:hover,
 .mini-link:hover {
-  transform: translateY(-1px);
+  filter: brightness(1.04);
 }
 
 .function-key {
@@ -1335,13 +1335,6 @@ html {
 .card-grid-home,
 .chart-summary-grid {
   min-width: 0;
-}
-
-@keyframes panel-swell {
-  0%   { opacity: 0.6; transform: scale(0.978); }
-  40%  { opacity: 1;   transform: scale(1.018); }
-  70%  { transform: scale(0.998); }
-  100% { opacity: 1;   transform: scale(1); }
 }
 
 @media (max-width: 1200px) {
