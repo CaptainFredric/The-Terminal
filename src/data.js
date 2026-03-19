@@ -10,21 +10,23 @@ export const authRoles = [
 ];
 
 export const functionKeys = [
-  { key: "F1", module: "home", label: "Home" },
-  { key: "F2", module: "quote", label: "Quote" },
-  { key: "F3", module: "chart", label: "Chart" },
-  { key: "F4", module: "news", label: "News" },
-  { key: "F5", module: "screener", label: "Screener" },
-  { key: "F6", module: "heatmap", label: "Heatmap" },
-  { key: "F7", module: "portfolio", label: "Portfolio" },
-  { key: "F8", module: "macro", label: "Macro" },
-  { key: "F9", module: "options", label: "Options" },
-  { key: "F10", module: "calculator", label: "Calculator" },
+  { key: "F1", module: "briefing", label: "Briefing" },
+  { key: "F2", module: "home", label: "Home" },
+  { key: "F3", module: "quote", label: "Quote" },
+  { key: "F4", module: "chart", label: "Chart" },
+  { key: "F5", module: "news", label: "News" },
+  { key: "F6", module: "screener", label: "Screener" },
+  { key: "F7", module: "heatmap", label: "Heatmap" },
+  { key: "F8", module: "portfolio", label: "Portfolio" },
+  { key: "F9", module: "macro", label: "Macro" },
+  { key: "F10", module: "options", label: "Options" },
+  { key: "F11", module: "calculator", label: "Calculator" },
 ];
 
-export const moduleOrder = ["home", "quote", "chart", "news", "screener", "heatmap", "portfolio", "macro", "options", "calculator"];
+export const moduleOrder = ["briefing", "home", "quote", "chart", "news", "screener", "heatmap", "portfolio", "macro", "options", "calculator"];
 
 export const moduleTitles = {
+  briefing: "Briefing",
   home: "Home",
   quote: "Quote",
   chart: "Chart",
@@ -46,6 +48,7 @@ export const commandCatalog = [
   { cmd: "NEXT", desc: "Move to the next module" },
   { cmd: "PREV", desc: "Move to the previous module" },
   { cmd: "RANGE 1Y", desc: "Set chart range" },
+  { cmd: "BRIEF", desc: "Open the Meridian briefing" },
   { cmd: "HOME", desc: "Open the home view" },
   { cmd: "SUGGEST", desc: "Show suggested next steps" },
   { cmd: "NEWS", desc: "Open the news view" },

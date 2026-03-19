@@ -35,7 +35,7 @@ const state = {
   user: null,
   activePanel: Number(uiSnapshot.activePanel || 1),
   focusedPanel: Number(uiSnapshot.focusedPanel || 0) || null,
-  panelModules: { 1: "home", 2: "quote", 3: "chart", 4: "news" },
+  panelModules: { 1: "briefing", 2: "quote", 3: "chart", 4: "news" },
   panelSymbols: { 1: "NVDA", 2: "AAPL", 3: "MSFT", 4: "QQQ" },
   chartRanges: normalizePanelMap(uiSnapshot.chartRanges, DEFAULT_CHART_RANGES),
   watchlist: [...defaultWatchlist],
@@ -780,6 +780,7 @@ function renderPanel(panel) {
   title.textContent = `${moduleTitles[moduleName] || moduleName}${symbolLabel}`;
 
   const renderers = {
+    briefing: renderBriefing,
     home: renderHome,
     quote: renderQuote,
     chart: renderChart,
@@ -793,6 +794,79 @@ function renderPanel(panel) {
   };
 
   content.innerHTML = (renderers[moduleName] || renderHome)(panel);
+}
+
+function renderBriefing(panel) {
+  const primary = state.panelSymbols[panel] || state.watchlist[0] || "SPY";
+  const primaryQuote = buildQuote(primary);
+  const pulse = calculatePulse();
+  const breadth = pulse.gainers + pulse.losers ? (pulse.gainers / (pulse.gainers + pulse.losers)) * 100 : 50;
+  const volatility = state.overviewQuotes.length
+    ? state.overviewQuotes.reduce((sum, quote) => sum + Math.abs(Number(quote.changePct || 0)), 0) / state.overviewQuotes.length
+    : 0;
+  const watchedLeaders = state.watchlist
+    .map((symbol) => buildQuote(symbol))
+    .filter(Boolean)
+    .sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct))
+    .slice(0, 4);
+
+  return `
+    <section class="stack stack-lg">
+      <article class="card briefing-hero">
+        <header class="card-head card-head-split">
+          <h4>Meridian Briefing</h4>
+          <small>${currentTimeShort()} snapshot</small>
+        </header>
+        <div class="briefing-grid">
+          <div class="brief-metric">
+            <span>Regime</span>
+            <strong>${state.marketPhase}</strong>
+            <small>${state.health.ok ? "Live feed connected" : "Feed reconnecting"}</small>
+          </div>
+          <div class="brief-metric">
+            <span>Breadth</span>
+            <strong>${breadth.toFixed(0)}%</strong>
+            <small>${pulse.gainers} up · ${pulse.losers} down</small>
+          </div>
+          <div class="brief-metric">
+            <span>Volatility pulse</span>
+            <strong>${volatility.toFixed(2)}%</strong>
+            <small>Avg absolute move</small>
+          </div>
+          <div class="brief-metric">
+            <span>Anchor</span>
+            <strong>${primary}</strong>
+            <small>${primaryQuote ? formatPrice(primaryQuote.price, primary) : "Fetching quote"}</small>
+          </div>
+        </div>
+      </article>
+
+      <div class="split-grid">
+        <article class="card">
+          <header class="card-head card-head-split"><h4>Signal board</h4><small>What to check next</small></header>
+          <div class="stack-list compact-list">
+            <button class="list-row" type="button" data-load-module="chart" data-target-symbol="${primary}" data-target-panel="${panel}"><strong>${primary} trend</strong><small>Review structure and range</small></button>
+            <button class="list-row" type="button" data-news-filter="${primary}"><strong>${primary} headlines</strong><small>Scan catalysts and tone</small></button>
+            <button class="list-row" type="button" data-load-module="portfolio" data-target-panel="${panel}"><strong>Risk check</strong><small>Open positions and alerts</small></button>
+            <button class="list-row" type="button" data-load-module="macro" data-target-panel="${panel}"><strong>Macro backdrop</strong><small>Rates, FX, and regime context</small></button>
+          </div>
+        </article>
+
+        <article class="card">
+          <header class="card-head card-head-split"><h4>Leaders</h4><small>By absolute move</small></header>
+          <div class="chip-grid compact-chip-grid">
+            ${watchedLeaders.length
+              ? watchedLeaders
+                  .map(
+                    (quote) => `<button class="chip chip-peer" type="button" data-load-module="quote" data-target-symbol="${quote.symbol}" data-target-panel="${panel}"><strong>${quote.symbol}</strong><span>${formatPrice(quote.price, quote.symbol)}</span><small class="${quote.changePct >= 0 ? "positive" : "negative"}">${formatSignedPct(quote.changePct)}</small></button>`,
+                  )
+                  .join("")
+              : `<div class="empty-inline">Leaders will appear as market data updates.</div>`}
+          </div>
+        </article>
+      </div>
+    </section>
+  `;
 }
 
 function renderHome(panel) {
@@ -1293,6 +1367,8 @@ function processCommand() {
       loadModule("chart", state.activePanel, { reveal: true });
     }
     refreshChart(state.panelSymbols[state.activePanel] || "AAPL", range);
+  } else if (first === "BRIEF" || first === "BRIEFING") {
+    loadModule("briefing", state.activePanel, { reveal: true });
   } else if (first === "HOME") {
     loadModule("home", state.activePanel, { reveal: true });
   } else if (first === "SETTINGS" || first === "ACCOUNT") {
@@ -1613,16 +1689,17 @@ function handleGlobalHotkeys(event) {
   if (inEditable && event.key !== "Escape") return;
 
   const hotkeys = {
-    F1: "home",
-    F2: "quote",
-    F3: "chart",
-    F4: "news",
-    F5: "screener",
-    F6: "heatmap",
-    F7: "portfolio",
-    F8: "macro",
-    F9: "options",
-    F10: "calculator",
+    F1: "briefing",
+    F2: "home",
+    F3: "quote",
+    F4: "chart",
+    F5: "news",
+    F6: "screener",
+    F7: "heatmap",
+    F8: "portfolio",
+    F9: "macro",
+    F10: "options",
+    F11: "calculator",
   };
 
   if (event.key === "Tab") {
@@ -1678,9 +1755,9 @@ function buildCommandSuggestions(panel) {
   }
 
   suggestions.push({
-    label: `Open ${symbol} chart`,
-    detail: "View trend and range in one panel",
-    command: `${symbol} CHART`,
+    label: "Open Meridian Briefing",
+    detail: "See regime, breadth, and signal board",
+    command: "BRIEF",
   });
 
   if (!state.alerts.length) {
