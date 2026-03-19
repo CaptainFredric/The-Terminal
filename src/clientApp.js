@@ -343,7 +343,7 @@ function openAuthModal(tab = "login") {
 
 function handleAuthEntry() {
   if (!AUTH_ENABLED) {
-    showToast("Login is temporarily disabled in this build.", "neutral");
+    showToast("Login is paused for now.", "neutral");
     return;
   }
   if (state.user) {
@@ -818,14 +818,14 @@ function renderHome(panel) {
         <article class="card stat-card glow-card">
           <span>Market phase</span>
           <strong>${state.marketPhase}</strong>
-          <small>${state.health.ok ? state.health.server : "Waiting for live server"}</small>
+          <small>${state.health.ok ? state.health.server : "Live feed reconnecting"}</small>
         </article>
       </div>
 
       <article class="card card-feature">
         <header class="card-head card-head-split">
-          <h4>Quick launch</h4>
-          <small>Jump into the live tape</small>
+          <h4>Quick start</h4>
+          <small>Open what you need in one click</small>
         </header>
         <div class="action-grid">
           <button class="action-tile" type="button" data-load-module="quote" data-target-symbol="${primarySymbol}" data-target-panel="${panel}"><strong>Quote</strong><span>Open ${primarySymbol} detail</span></button>
@@ -836,7 +836,7 @@ function renderHome(panel) {
       </article>
 
       <article class="card">
-        <header class="card-head card-head-split"><h4>Top movers in your watchlist</h4><small>${top.length} live symbols</small></header>
+        <header class="card-head card-head-split"><h4>Watchlist movers</h4><small>${top.length} active symbols</small></header>
         <div class="chip-grid">
           ${top
             .map(
@@ -854,7 +854,7 @@ function renderHome(panel) {
 
       <div class="split-grid">
         <article class="card">
-          <header class="card-head card-head-split"><h4>Recent commands</h4><small>Fast recall</small></header>
+          <header class="card-head card-head-split"><h4>Recent commands</h4><small>Use again</small></header>
           <div class="stack-list compact-list">
             ${recentCommands.length ? recentCommands.map((item) => `<button class="list-row" type="button" data-autocomplete="${item}"><strong>${item}</strong><small>Run again</small></button>`).join("") : `<div class="empty-inline">Commands you run will show up here.</div>`}
           </div>
@@ -864,13 +864,13 @@ function renderHome(panel) {
           <div class="pulse-grid">
             ${state.overviewQuotes.length
               ? state.overviewQuotes.slice(0, 4).map((quote) => `<div class="pulse-card is-live"><span>${quote.symbol}</span><strong>${formatPrice(quote.price, quote.symbol)}</strong><small class="${Number(quote.changePct || 0) >= 0 ? "positive" : "negative"}">${formatSignedPct(quote.changePct || 0)}</small></div>`).join("")
-              : `<div class="pulse-card"><span>Market pulse</span><strong>Loading live data…</strong><small>Quotes will appear once feed is ready</small></div>`}
+              : `<div class="pulse-card"><span>Market pulse</span><strong>Loading market data…</strong><small>Quotes will appear shortly</small></div>`}
           </div>
         </article>
       </div>
 
       <article class="card">
-        <header class="card-head card-head-split"><h4>Suggested next actions</h4><small>Based on your workspace</small></header>
+        <header class="card-head card-head-split"><h4>Suggested next steps</h4><small>Picked from your current view</small></header>
         <div class="stack-list compact-list">
           ${suggestions.map((item) => `<button class="list-row" type="button" data-suggest-command="${item.command}"><strong>${item.label}</strong><small>${item.detail}</small></button>`).join("")}
         </div>
@@ -992,7 +992,7 @@ function renderNews(panel) {
               `;
             })
             .join("")
-        : emptyState(state.newsItems.length ? `No headlines matched ${state.newsFilter}.` : "Loading market headlines…")}
+        : emptyState(state.newsItems.length ? `No headlines matched ${state.newsFilter}.` : "Loading headlines…")}
     </section>
   `;
 }
@@ -1135,6 +1135,7 @@ function renderMacro() {
       </article>
       <article class="card">
         <header class="card-head"><h4>FX rates</h4></header>
+        <div class="fx-grid">${fxCards || `<div class="empty-inline">Loading FX rates…</div>`}</div>
         <div class="fx-grid">${fxCards || `<div class="empty-inline">Loading FX rates…</div>`}</div>
       </article>
     </section>
@@ -1298,12 +1299,12 @@ function processCommand() {
     openSettingsModal();
   } else if (first === "SUGGEST" || first === "SUGGESTIONS") {
     loadModule("home", state.activePanel, { reveal: true });
-    showToast("Showing suggested next actions.", "neutral");
+    showToast("Showing suggested next steps.", "neutral");
   } else if (first === "LOGIN" || first === "SIGNUP" || first === "REGISTER" || first === "SYNC") {
     if (AUTH_ENABLED) {
       openAuthModal(first === "SIGNUP" || first === "REGISTER" ? "signup" : "login");
     } else {
-      showToast("Login is temporarily disabled in this build.", "neutral");
+      showToast("Login is paused for now.", "neutral");
     }
   } else if (first === "NEWS" && second) {
     state.newsFilter = second;
@@ -1352,6 +1353,7 @@ function processCommand() {
     refreshQuotes([first]);
   } else {
     showToast(`Unknown command: ${upper}`, "error");
+    showToast(`I couldn't find “${upper}”. Try HELP.`, "error");
   }
 
   if (el.commandInput) el.commandInput.value = "";
@@ -1669,15 +1671,15 @@ function buildCommandSuggestions(panel) {
     });
   } else {
     suggestions.push({
-      label: "Local-first workspace",
-      detail: "This version runs without login for uninterrupted flow",
+      label: "Local workspace mode",
+      detail: "Everything is running without login right now",
       command: "SAVE",
     });
   }
 
   suggestions.push({
     label: `Open ${symbol} chart`,
-    detail: "See current trend and return stats",
+    detail: "View trend and range in one panel",
     command: `${symbol} CHART`,
   });
 
@@ -1685,28 +1687,28 @@ function buildCommandSuggestions(panel) {
     const threshold = Math.max(1, Math.round((buildQuote(symbol)?.price || 100) * 1.03));
     suggestions.push({
       label: `Create ${symbol} alert`,
-      detail: "Start monitoring threshold moves",
+      detail: "Track a price level for this symbol",
       command: `ALERT ${symbol} ${threshold}`,
     });
   } else {
     suggestions.push({
-      label: "Review portfolio and alerts",
-      detail: "Check triggers and position risk",
+      label: "Review positions and alerts",
+      detail: "Check triggers and current exposure",
       command: "PORT",
     });
   }
 
   if (state.watchlist.length < 10) {
     suggestions.push({
-      label: "Expand your watchlist",
-      detail: "Add benchmark symbols like SPY",
+      label: "Broaden your watchlist",
+      detail: "Add a benchmark like SPY",
       command: "WATCH SPY",
     });
   }
 
   suggestions.push({
-    label: "Get more ideas",
-    detail: "Show this smart suggestion panel again",
+    label: "Show more suggestions",
+    detail: "Refresh this panel with quick ideas",
     command: "SUGGEST",
   });
 

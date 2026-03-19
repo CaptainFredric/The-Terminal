@@ -6,7 +6,7 @@
   --border: #2a355e;
   --text: #e8eeff;
   --muted: #98a6cf;
-  --accent: #4f7cff;
+  --accent: #6f8fff;
   --success: #2fcf84;
   --danger: #ff5f7f;
   --warning: #f6b34b;
@@ -24,6 +24,9 @@ body {
   font-family: var(--sans);
   background: radial-gradient(circle at 18% -12%, #1a2a57 0%, #0f1733 42%, var(--bg) 72%);
   color: var(--text);
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 html {
@@ -75,7 +78,7 @@ html {
   gap: 12px;
   background: linear-gradient(180deg, rgba(20, 30, 60, 0.94) 0%, rgba(14, 21, 46, 0.95) 100%);
   border: 1px solid rgba(67, 90, 162, 0.42);
-  border-radius: var(--radius);
+  border-radius: 14px;
   padding: 14px 16px;
 }
 
@@ -99,7 +102,8 @@ html {
 .brand-block strong,
 .topbar__brand strong {
   display: block;
-  font-size: 1rem;
+  font-size: 1.08rem;
+  letter-spacing: 0.01em;
 }
 
 .brand-block p,
@@ -110,8 +114,9 @@ html {
 }
 
 .brand-slogan {
-  letter-spacing: 0.01em;
-  color: #a8b8e9 !important;
+  letter-spacing: 0.02em;
+  color: #b9c7ee !important;
+  font-size: 0.8rem !important;
 }
 
 .topbar-right,
@@ -205,9 +210,9 @@ html {
   top: 8px;
   z-index: 12;
   padding: 8px;
-  border: 1px solid rgba(49, 68, 120, 0.35);
-  border-radius: 12px;
-  background: rgba(11, 17, 35, 0.7);
+  border: 1px solid rgba(58, 78, 138, 0.34);
+  border-radius: 14px;
+  background: rgba(13, 20, 40, 0.78);
   backdrop-filter: blur(8px);
 }
 
@@ -240,8 +245,8 @@ html {
 
 .workspace-shell {
   display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 14px;
+  grid-template-columns: 300px 1fr;
+  gap: 16px;
   min-height: 0;
 }
 
@@ -251,8 +256,8 @@ html {
 }
 
 .rail-card {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border: 1px solid rgba(63, 84, 148, 0.44);
+  border-radius: 14px;
   background: var(--bg-soft);
   overflow: hidden;
 }
@@ -278,7 +283,7 @@ html {
 .rail-body {
   padding: 8px;
   display: grid;
-  gap: 6px;
+  gap: 8px;
   max-height: 320px;
   overflow: auto;
 }
@@ -290,7 +295,7 @@ html {
 }
 
 .rail-item {
-  border: 1px solid var(--border);
+  border: 1px solid rgba(70, 94, 164, 0.35);
   background: var(--surface);
   color: var(--text);
   border-radius: 8px;
@@ -342,12 +347,12 @@ html {
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
-  gap: 10px;
+  gap: 12px;
 }
 
 .panel {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border: 1px solid rgba(67, 90, 160, 0.42);
+  border-radius: 14px;
   background: var(--bg-soft);
   overflow: hidden;
   display: grid;
@@ -365,8 +370,8 @@ html {
   justify-content: space-between;
   align-items: center;
   gap: 10px;
-  padding: 11px 14px;
-  border-bottom: 1px solid rgba(42, 53, 94, 0.8);
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(67, 88, 150, 0.46);
   background: rgba(10, 15, 34, 0.45);
   backdrop-filter: blur(4px);
 }
@@ -374,9 +379,9 @@ html {
 .panel-head h3,
 .panel-title {
   margin: 0;
-  font-size: 0.84rem;
+  font-size: 0.9rem;
   font-weight: 700;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.015em;
 }
 
 .panel-controls {
@@ -405,7 +410,7 @@ html {
 }
 
 .panel-content {
-  padding: 12px;
+  padding: 14px;
   overflow: auto;
 }
 
@@ -414,12 +419,12 @@ html {
   grid-template-columns: auto 1fr auto;
   gap: 10px;
   align-items: center;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: rgba(13, 19, 42, 0.95);
-  padding: 10px 14px;
+  border: 1px solid rgba(91, 115, 191, 0.44);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(16, 24, 52, 0.96) 0%, rgba(12, 18, 40, 0.97) 100%);
+  padding: 12px 14px;
   position: relative;
-  transition: border-color .18s;
+  transition: border-color .18s, box-shadow .18s;
 }
 
 .command-shell:focus-within {
@@ -434,7 +439,7 @@ html {
 }
 
 .command-input {
-  border: 1px solid var(--border);
+  border: 1px solid rgba(86, 108, 176, 0.42);
   border-radius: 8px;
   background: var(--surface);
   color: var(--text);
@@ -481,9 +486,9 @@ html {
 
 .statusbar,
 .status-bar {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-soft);
+  border: 1px solid rgba(61, 83, 146, 0.42);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(17, 25, 52, 0.95) 0%, rgba(13, 20, 43, 0.95) 100%);
   padding: 10px 12px;
   display: flex;
   flex-wrap: wrap;
@@ -503,10 +508,10 @@ html {
 }
 
 .card {
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  border: 1px solid rgba(65, 87, 150, 0.4);
+  border-radius: 14px;
   background: var(--surface);
-  padding: 12px;
+  padding: 13px;
 }
 
 .card-head {
@@ -515,7 +520,8 @@ html {
 
 .card-head h4 {
   margin: 0;
-  font-size: 0.86rem;
+  font-size: 0.94rem;
+  letter-spacing: 0.01em;
 }
 
 .card-grid {
@@ -600,10 +606,14 @@ html {
 
 .data-table th,
 .data-table td {
-  padding: 8px;
-  border-bottom: 1px solid var(--border);
+  padding: 9px 8px;
+  border-bottom: 1px solid rgba(68, 88, 150, 0.34);
   text-align: left;
   font-size: 0.8rem;
+}
+
+.data-table tbody tr:hover {
+  background: rgba(31, 44, 88, 0.28);
 }
 
 .data-table th {
